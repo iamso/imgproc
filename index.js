@@ -5,6 +5,8 @@ const {promisify} = require('util')
 const request = promisify(require('request'));
 const sharp = require('sharp');
 const fileType = require('file-type');
+const objectHash = require('object-hash');
+const {dirSync} = require('tmp');
 
 const cors = require('cors');
 const compression = require('compression');
@@ -17,7 +19,8 @@ const cache = require('apicache').middleware;
 
 const app = express();
 const port = process.env.PORT || 8000;
-const noImage = fs.readFileSync(path.join(__dirname, 'public', 'no-image.jpg'))
+const noImage = fs.readFileSync(path.join(__dirname, 'public', 'no-image.jpg'));
+const tmpDir = dirSync();
 
 app.use(helmet());
 app.use(cors());
@@ -39,49 +42,65 @@ app.get('/:url?', cache('90 days'), async (req, res, next) => {
     return;
   }
 
-  const requestSettings = {
-      url: options.url,
-      method: 'GET',
-      encoding: null
-  };
+  const optionsHash = objectHash(options);
+  const tmpFile = path.join(tmpDir.name, optionsHash);
+  let buffer;
 
-  const response = await request(requestSettings).catch(err => err);
+  if (fs.existsSync(tmpFile)) {
+    buffer = fs.readFileSync(tmpFile);
+  }
+  else {
+    const requestSettings = {
+        url: options.url,
+        method: 'GET',
+        encoding: null
+    };
 
-  if (!response.body || response.statusCode !== 200) {
-    next(response);
-    return;
+    const response = await request(requestSettings).catch(err => err);
+
+    if (!response.body || response.statusCode !== 200) {
+      next(response);
+      return;
+    }
+
+    if (!/^image\//.test(response.headers['content-type'])) {
+      next(new Error('no image provided'));
+      return;
+    }
+
+    image = sharp(response.body);
+
+    image = image
+      .resize({
+        width: parseInt(options.width || 0),
+        height: parseInt(options.height || 0),
+        fit: options.fit,
+        background: options.background ? `#${options.background}` : null,
+      })
+      .flip(options.hasOwnProperty('flip'))
+      .flop(options.hasOwnProperty('flop'))
+      .rotate(parseInt(options.rotate || 0), {
+        background: options.background ? `#${options.background}` : null,
+      })
+      .greyscale(options.hasOwnProperty('greyscale') || options.hasOwnProperty('grayscale'))
+      .negate(options.hasOwnProperty('negate'))
+      .normalize(options.hasOwnProperty('normalize') || options.hasOwnProperty('normalise'))
+    ;
+
+    if (options.format) {
+      image = image.toFormat(options.format);
+    }
+
+    buffer = await image.toBuffer();
+
+    fs.writeFile(tmpFile, buffer, (err) => {
+      if (err) {
+        fs.unlink(tmpFile, (err) => {});
+      }
+    });
   }
 
-  if (!/^image\//.test(response.headers['content-type'])) {
-    next(new Error('no image provided'))
-  }
-
-  let image = sharp(response.body);
-
-  image = image
-    .resize({
-      width: parseInt(options.width || 0),
-      height: parseInt(options.height || 0),
-      fit: options.fit,
-      background: options.background,
-    })
-    .flip(options.hasOwnProperty('flip'))
-    .flop(options.hasOwnProperty('flop'))
-    .rotate(parseInt(options.rotate || 0), {
-      background: options.background,
-    })
-    .greyscale(options.hasOwnProperty('greyscale') || options.hasOwnProperty('grayscale'))
-    .negate(options.hasOwnProperty('negate'))
-    .normalize(options.hasOwnProperty('normalize') || options.hasOwnProperty('normalise'))
-  ;
-  
-  if (options.format) {
-    image = image.toFormat(options.format);
-  }
-
-  let buffer = await image.toBuffer();
-
-  let {mime} = fileType(buffer);
+  let {ext, mime} = fileType(buffer);
 
   res.type(mime);
   res.send(buffer);
@@ -95,3 +114,7 @@ app.use((err, req, res, next) => {
 const server = app.listen(port, (...args) => {
   console.log('listening on port %s', server.address().port);
 });
+
+process.on ('exit', code => {
+  tmpDir.removeCallback();
+})
