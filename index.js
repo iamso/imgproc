@@ -68,7 +68,7 @@ app.get('/:url?', cache('90 days'), async (req, res, next) => {
       return;
     }
 
-    image = sharp(response.body);
+    let image = sharp(response.body);
 
     image = image
       .resize({
