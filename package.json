@@ -9,7 +9,7 @@
     "dev": "nodemon index.js"
   },
   "author": "Steve Ottoz <so@dev.so>",
-  "license": "MIT",
+  "license": "ISC",
   "dependencies": {
     "apicache": "^1.5.2",
     "compression": "^1.7.4",
