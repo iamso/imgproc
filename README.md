@@ -26,9 +26,9 @@ npm run dev
 
 Default port is 8000, but can be set via environment variable:
 
-```
+```bash
 PORT=1234 npm start
-// or
+# or
 PORT=1234 npm run dev
 ```
 
