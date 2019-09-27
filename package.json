@@ -8,6 +8,9 @@
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
+  "engines": {
+    "node": ">=12"
+  },
   "author": "Steve Ottoz <so@dev.so>",
   "license": "ISC",
   "dependencies": {
