@@ -76,6 +76,7 @@ app.get('/:url?', cache('90 days'), async (req, res, next) => {
         height: parseInt(options.height || 0),
         fit: options.fit,
         background: options.background ? `#${options.background}` : null,
+        withoutEnlargement: true,
       })
       .flip(options.hasOwnProperty('flip'))
       .flop(options.hasOwnProperty('flop'))
