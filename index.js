@@ -109,7 +109,7 @@ app.get('/:url?', cache('90 days'), async (req, res, next) => {
 app.use((err, req, res, next) => {
   res.type('image/jpeg');
   res.send(noImage);
-})
+});
 
 const server = app.listen(port, (...args) => {
   console.log('listening on port %s', server.address().port);
@@ -117,4 +117,4 @@ const server = app.listen(port, (...args) => {
 
 process.on ('exit', code => {
   tmpDir.removeCallback();
-})
+});
