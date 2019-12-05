@@ -70,6 +70,30 @@ app.get('/:url?', cache('90 days'), async (req, res, next) => {
 
     let image = sharp(response.body);
 
+    const imageMeta = await image.metadata().catch(error => false);
+
+    if (imageMeta) {
+      if (options.width && options.height) {
+        const originalRatio = imageMeta.height / imageMeta.width;
+        const newRatio = options.height / options.width;
+
+        if (newRatio < originalRatio) {
+          options.width = Math.min(options.width, imageMeta.width);
+          options.height = options.width * newRatio;
+        }
+        else {
+          options.height = Math.min(options.height, imageMeta.height);
+          options.width = options.height / newRatio;
+        }
+      }
+      else if (options.width) {
+        options.width = Math.min(options.width, imageMeta.width);
+      }
+      else if (options.height) {
+        options.height = Math.min(options.height, imageMeta.height);
+      }
+    }
+
     image = image
       .resize({
         width: parseInt(options.width || 0),
