@@ -4,7 +4,7 @@ const fs = require('fs');
 const {promisify} = require('util')
 const request = promisify(require('request'));
 const sharp = require('sharp');
-const fileType = require('file-type');
+const FileType = require('file-type');
 const objectHash = require('object-hash');
 const {dirSync} = require('tmp');
 
@@ -16,6 +16,7 @@ const serveFavicon = require('serve-favicon');
 const serveStatic = require('serve-static');
 const helmet = require('helmet');
 const cache = require('apicache').middleware;
+const useragent = require('express-useragent');
 
 const app = express();
 const port = process.env.PORT || 8000;
@@ -29,6 +30,7 @@ app.use(serveFavicon(path.join(__dirname, 'public', 'favicon.ico')));
 app.use(serveStatic(path.join(__dirname, 'public')));
 app.use(morgan('tiny'));
 app.use(responseTime());
+app.use(useragent.express());
 
 app.get('/:url?', cache('90 days'), async (req, res, next) => {
   const options = {
@@ -96,8 +98,8 @@ app.get('/:url?', cache('90 days'), async (req, res, next) => {
 
     image = image
       .resize({
-        width: parseInt(options.width || 0),
-        height: parseInt(options.height || 0),
+        width: parseInt(options.width || 0) || null,
+        height: parseInt(options.height || 0) || null,
         fit: options.fit,
         background: options.background ? `#${options.background}` : null,
         withoutEnlargement: true,
@@ -125,7 +127,7 @@ app.get('/:url?', cache('90 days'), async (req, res, next) => {
     });
   }
 
-  let {ext, mime} = fileType(buffer);
+  let {ext, mime} = await FileType.fromBuffer(buffer);
 
   res.type(mime);
   res.send(buffer);
