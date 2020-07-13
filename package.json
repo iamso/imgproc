@@ -1,6 +1,6 @@
 {
   "name": "imgproc",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "image processing service",
   "main": "index.js",
   "scripts": {
